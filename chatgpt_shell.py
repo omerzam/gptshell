@@ -3,6 +3,7 @@
 import openai
 import sys
 import os
+import re
 import subprocess
 from dotenv import load_dotenv
 
@@ -26,6 +27,15 @@ def get_command_from_gpt(task):
     return command
 
 
+def process_arguments(command):
+    argument_pattern = re.compile(r'\[([^\]]+)\]')
+    matches = argument_pattern.findall(command)
+    for match in matches:
+        value = input(f"Please enter a value for {match}: ")
+        command = command.replace(f"[{match}]", value)
+    return command
+
+
 if __name__ == "__main__":
     task = sys.argv[1]
     command = get_command_from_gpt(task)
@@ -35,6 +45,7 @@ if __name__ == "__main__":
         confirm = input("Do you want to execute this command? (yes/no) ")
 
         if confirm.lower() in ["yes", "y"]:
+            command = process_arguments(command)
             subprocess.run(command, shell=True)
         else:
             print("Command not executed.")
