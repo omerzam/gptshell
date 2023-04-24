@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Find the real path of the gptsh symlink
+SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+
+# Get the directory containing the gptsh symlink
+SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
+
+# Construct the path to the chatgpt_shell.py script
+HELPER_SCRIPT="$SCRIPT_DIR/chatgpt_shell.py"
+
+# Combine all the command-line arguments into a single string
+prompt="$*"
+
+# Run the chatgpt_helper.py script with the prompt
+python3 "$HELPER_SCRIPT" "$prompt"

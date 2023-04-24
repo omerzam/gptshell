@@ -37,7 +37,7 @@ def process_arguments(command):
 
 
 if __name__ == "__main__":
-    task = sys.argv[1]
+    task = " ".join(sys.argv[1:])
     command = get_command_from_gpt(task)
 
     if command:
