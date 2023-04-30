@@ -11,12 +11,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
-max_arg_length = int(os.getenv("MAX_ARG_LENGTH", 100))
+MAX_ARG_LENGTH = int(os.getenv("MAX_ARG_LENGTH", 100))
 
 
 def get_command_from_gpt(task):
-    prompt = f"ubuntu shell {task} show command only: command [arguments]"
     try:
+        prompt = f"ubuntu shell {task} show command only: command [arguments]"
         response = openai.Completion.create(
             engine="text-davinci-003",
             prompt=prompt,
@@ -25,6 +25,9 @@ def get_command_from_gpt(task):
             stop=None,
             temperature=0.5,
         )
+        response_text = response.choices[0].text.strip()
+        command = response_text
+        return command
     except AuthenticationError:
         print("Error: Invalid OpenAI API key.")
         return None
@@ -38,17 +41,12 @@ def get_command_from_gpt(task):
         print(f"Error: Unexpected error occurred - {e}")
         return None
 
-    response_text = response.choices[0].text.strip()
-    command = response_text
-    return command
 
-
-def global_validation(arg_value):
-    if len(arg_value) > max_arg_length:
+def global_validation(value):
+    if len(value) > MAX_ARG_LENGTH:
         raise ValueError(
-            f"Argument value too long (max {max_arg_length} characters)")
-
-    # Add more global validation rules as needed
+            f"Provided value exceeds the maximum allowed length of {MAX_ARG_LENGTH} characters.")
+    return value
 
 
 def process_arguments(command):
@@ -56,7 +54,7 @@ def process_arguments(command):
     matches = argument_pattern.findall(command)
     for match in matches:
         value = input(f"Please enter a value for {match}: ")
-        global_validation(value)
+        value = global_validation(value)
         command = command.replace(f"[{match}]", value)
     return command
 
@@ -70,9 +68,14 @@ if __name__ == "__main__":
         confirm = input("Do you want to execute this command? (yes/no) ")
 
         if confirm.lower() in ["yes", "y"]:
-            command = process_arguments(command)
+            try:
+                command = process_arguments(command)
+            except ValueError as e:
+                print(f"Error: {e}")
+                sys.exit(1)
+
             subprocess.run(command, shell=True)
         else:
             print("Command not executed.")
     else:
-        print("No command found. Check the error message and try again.")
+        print("No command found.")
