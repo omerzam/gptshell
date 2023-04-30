@@ -10,6 +10,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
+max_arg_length = int(os.getenv("MAX_ARG_LENGTH", 100))
+
+
+def global_validation(arg_value):
+    if len(arg_value) > max_arg_length:
+        raise ValueError(
+            f"Argument value too long (max {max_arg_length} characters)")
+
+    # Add more global validation rules as needed
 
 
 def get_command_from_gpt(task):
@@ -32,6 +41,14 @@ def process_arguments(command):
     matches = argument_pattern.findall(command)
     for match in matches:
         value = input(f"Please enter a value for {match}: ")
+
+        # Validate the argument value using the global_validation function
+        try:
+            global_validation(value)
+        except ValueError as e:
+            print(f"Error: {e}")
+            return
+
         command = command.replace(f"[{match}]", value)
     return command
 
