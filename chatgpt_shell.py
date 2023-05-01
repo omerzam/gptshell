@@ -6,12 +6,40 @@ import sys
 import os
 import re
 import subprocess
+import pathlib
 from dotenv import load_dotenv
 
 load_dotenv()
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 MAX_ARG_LENGTH = int(os.getenv("MAX_ARG_LENGTH", 100))
+
+
+def read_history():
+    history_path = pathlib.Path.home() / ".gptsh_history"
+    print('read_history history path: %s' % history_path)
+    if history_path.exists():
+        with open(history_path, "r") as history_file:
+            return [line.strip() for line in history_file]
+    else:
+        return []
+
+
+def write_history(command):
+    history_path = pathlib.Path.home() / ".gptsh_history"
+    print('write_history history path: %s' % history_path)
+    with open(history_path, "a") as history_file:
+        history_file.write(f"{command}\n")
+
+
+def show_history():
+    history = read_history()
+    if history:
+        print("Command history:")
+        for index, command in enumerate(history, start=1):
+            print(f"{index}. {command}")
+    else:
+        print("No command history.")
 
 
 def get_command_from_gpt(task):
@@ -61,21 +89,25 @@ def process_arguments(command):
 
 if __name__ == "__main__":
     task = " ".join(sys.argv[1:])
-    command = get_command_from_gpt(task)
-
-    if command:
-        print(f"Proposed command: {command}")
-        confirm = input("Do you want to execute this command? (yes/no) ")
-
-        if confirm.lower() in ["yes", "y"]:
-            try:
-                command = process_arguments(command)
-            except ValueError as e:
-                print(f"Error: {e}")
-                sys.exit(1)
-
-            subprocess.run(command, shell=True)
-        else:
-            print("Command not executed.")
+    if task.lower() == "history":
+        show_history()
     else:
-        print("No command found.")
+        command = get_command_from_gpt(task)
+
+        if command:
+            print(f"Proposed command: {command}")
+            confirm = input("Do you want to execute this command? (yes/no) ")
+
+            if confirm.lower() in ["yes", "y"]:
+                try:
+                    command = process_arguments(command)
+                except ValueError as e:
+                    print(f"Error: {e}")
+                    sys.exit(1)
+
+                subprocess.run(command, shell=True)
+                write_history(command)
+            else:
+                print("Command not executed.")
+        else:
+            print("No command found.")
