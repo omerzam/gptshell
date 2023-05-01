@@ -43,19 +43,21 @@ def show_history():
 
 
 def get_command_from_gpt(task):
+    suggestion_count = int(os.getenv("SUGGESTION_COUNT", 3))
     try:
-        prompt = f"ubuntu shell {task} show command only: command [arguments]"
+        prompt = f"ubuntu shell {task} show command only show generic parts of the command in brackets: command [arguments]"
         response = openai.Completion.create(
             engine="text-davinci-003",
             prompt=prompt,
             max_tokens=50,
-            n=1,
+            n=suggestion_count,  # Change the value of n to get multiple responses
             stop=None,
             temperature=0.5,
         )
-        response_text = response.choices[0].text.strip()
-        command = response_text
-        return command
+        print('response: %s' % response)
+        response_texts = [choice.text.strip() for choice in response.choices]
+        commands = response_texts
+        return commands
     except AuthenticationError:
         print("Error: Invalid OpenAI API key.")
         return None
@@ -89,22 +91,30 @@ def process_arguments(command):
 
 if __name__ == "__main__":
     task = " ".join(sys.argv[1:])
+
     if task.lower() == "history":
         show_history()
     else:
-        command = get_command_from_gpt(task)
+        commands = get_command_from_gpt(task)
 
-        if command:
-            print(f"Proposed command: {command}")
+        if commands:
+            if len(commands) == 1:
+                command = commands[0]
+                print(f"Proposed command: {command}")
+            else:
+                print("Command suggestions:")
+                for i, command in enumerate(commands, start=1):
+                    print(f"{i}. {command}")
+
+                selected = int(
+                    input("Enter the number of the command you want to execute: "))
+                command = commands[selected - 1]
+                print(f"Selected command: {command}")
+
             confirm = input("Do you want to execute this command? (yes/no) ")
 
             if confirm.lower() in ["yes", "y"]:
-                try:
-                    command = process_arguments(command)
-                except ValueError as e:
-                    print(f"Error: {e}")
-                    sys.exit(1)
-
+                command = process_arguments(command)
                 subprocess.run(command, shell=True)
                 write_history(command)
             else:
