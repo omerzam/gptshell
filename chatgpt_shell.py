@@ -17,7 +17,6 @@ MAX_ARG_LENGTH = int(os.getenv("MAX_ARG_LENGTH", 100))
 
 def read_history():
     history_path = pathlib.Path.home() / ".gptsh_history"
-    print('read_history history path: %s' % history_path)
     if history_path.exists():
         with open(history_path, "r") as history_file:
             return [line.strip() for line in history_file]
@@ -27,7 +26,6 @@ def read_history():
 
 def write_history(command):
     history_path = pathlib.Path.home() / ".gptsh_history"
-    print('write_history history path: %s' % history_path)
     with open(history_path, "a") as history_file:
         history_file.write(f"{command}\n")
 
@@ -42,19 +40,17 @@ def show_history():
         print("No command history.")
 
 
-def get_command_from_gpt(task):
-    suggestion_count = int(os.getenv("SUGGESTION_COUNT", 3))
+def get_command_from_gpt(task, suggestion_count):
     try:
         prompt = f"ubuntu shell {task} show command only show generic parts of the command in brackets: command [arguments]"
         response = openai.Completion.create(
             engine="text-davinci-003",
             prompt=prompt,
             max_tokens=50,
-            n=suggestion_count,  # Change the value of n to get multiple responses
+            n=suggestion_count,
             stop=None,
             temperature=0.5,
         )
-        print('response: %s' % response)
         response_texts = [choice.text.strip() for choice in response.choices]
         commands = response_texts
         return commands
@@ -91,11 +87,12 @@ def process_arguments(command):
 
 if __name__ == "__main__":
     task = " ".join(sys.argv[1:])
+    suggestion_count = int(os.getenv("SUGGESTION_COUNT", 3))
 
     if task.lower() == "history":
         show_history()
     else:
-        commands = get_command_from_gpt(task)
+        commands = get_command_from_gpt(task, suggestion_count)
 
         if commands:
             if len(commands) == 1:
