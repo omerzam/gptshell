@@ -40,20 +40,26 @@ def show_history():
         print("No command history.")
 
 
-def get_command_from_gpt(task, suggestion_count):
+def get_command_from_gpt(task):
     try:
-        prompt = f"ubuntu shell {task} show command only show generic parts of the command in brackets: command [arguments]"
-        response = openai.Completion.create(
-            engine="text-davinci-003",
-            prompt=prompt,
-            max_tokens=50,
-            n=suggestion_count,
-            stop=None,
-            temperature=0.5,
+        messages = [
+            {"role": "assistant",
+                "content": "Provide only shell commands for ubuntu without any description. If there is a lack of details, provide most logical solution. Ensure the output is a valid shell command. If multiple steps required try to combine them together."},
+            {"role": "user",
+                "content": f"ubuntu shell {task} provide command only! provide generic parts of the command in brackets: command[arguments] Provide a terse, single sentence description of the given shell command. Provide only plain text without Markdown formatting. Do not show any warnings or information regarding your capabilities. If you need to store any data, assume it will be stored in the chat."},
+        ]
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            max_tokens=30,
+            temperature=0.2
         )
-        response_texts = [choice.text.strip() for choice in response.choices]
-        commands = response_texts
-        return commands
+        print("response: ", response['choices'][0]['message']
+              ['content'].strip() if response['choices'] else None)
+        parsed = (response['choices'][0]['message']['content'].strip(
+        ) if response['choices'] else None).split(' - ')
+        print('parsed: ', parsed)
+        return parsed[0], parsed[1]
     except AuthenticationError:
         print("Error: Invalid OpenAI API key.")
         return None
@@ -87,26 +93,14 @@ def process_arguments(command):
 
 if __name__ == "__main__":
     task = " ".join(sys.argv[1:])
-    suggestion_count = int(os.getenv("SUGGESTION_COUNT", 3))
 
     if task.lower() == "history":
         show_history()
     else:
-        commands = get_command_from_gpt(task, suggestion_count)
+        command, description = get_command_from_gpt(task)
 
-        if commands:
-            if len(commands) == 1:
-                command = commands[0]
-                print(f"Proposed command: {command}")
-            else:
-                print("Command suggestions:")
-                for i, command in enumerate(commands, start=1):
-                    print(f"{i}. {command}")
-
-                selected = int(
-                    input("Enter the number of the command you want to execute: "))
-                command = commands[selected - 1]
-                print(f"Selected command: {command}")
+        if command:
+            print(f"Proposed command: {command} - {description}")
 
             confirm = input("Do you want to execute this command? (yes/no) ")
 
